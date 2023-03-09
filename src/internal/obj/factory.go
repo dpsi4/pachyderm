@@ -395,9 +395,6 @@ func NewClientFromURLAndSecret(ctx context.Context, url *ObjectStoreURL, reverse
 			return nil, errors.Errorf("could not parse bucket %q from url", url.Bucket)
 		}
 		c, err = NewMinioClient(parts[0], parts[1], "minioadmin", "minioadmin", false, false)
-	case "local":
-		root := strings.ReplaceAll(url.Bucket, ".", "/")
-		c, err = NewLocalClient("/" + root)
 	}
 	switch {
 	case err != nil:
@@ -496,8 +493,6 @@ func NewClientFromEnv(ctx context.Context, storageRoot string) (c Client, err er
 		c, err = NewMicrosoftClientFromEnv()
 	case Minio:
 		c, err = NewMinioClientFromEnv()
-	case Local:
-		c, err = NewLocalClient(storageRoot)
 	}
 	switch {
 	case err != nil:
@@ -537,8 +532,6 @@ func NewClient(ctx context.Context, storageBackend string, storageRoot string) (
 		c, err = NewGoogleClientFromSecret("")
 	case Microsoft:
 		c, err = NewMicrosoftClientFromSecret("")
-	case Local:
-		c, err = NewLocalClient(storageRoot)
 	}
 	switch {
 	case err != nil:
