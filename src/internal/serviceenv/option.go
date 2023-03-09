@@ -10,7 +10,7 @@ func (conf *StorageConfiguration) ChunkMemoryCache() kv.GetPut {
 	if size < 1 {
 		size = 1
 	}
-	return kv.NewMemCache(size)
+	return kv.NewLRUCache(kv.Void{}, kv.NewMemStore(), size)
 }
 
 type ConfigOption = func(*Configuration)

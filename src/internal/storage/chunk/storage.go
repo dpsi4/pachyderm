@@ -5,13 +5,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/pachyderm/pachyderm/v2/src/internal/errors"
 	"github.com/pachyderm/pachyderm/v2/src/internal/miscutil"
-	"github.com/pachyderm/pachyderm/v2/src/internal/obj"
 	"github.com/pachyderm/pachyderm/v2/src/internal/pachhash"
 	"github.com/pachyderm/pachyderm/v2/src/internal/pachsql"
 	"github.com/pachyderm/pachyderm/v2/src/internal/storage/kv"
 	"github.com/pachyderm/pachyderm/v2/src/internal/storage/track"
+	"github.com/pachyderm/pachyderm/v2/src/internal/stream"
 )
 
 const (
@@ -28,7 +27,6 @@ const (
 // - Manages tracker state to keep chunks alive while uploading.
 // - Manages an internal chunk cache and work deduplicator (parallel downloads of the same chunk will be deduplicated).
 type Storage struct {
-	objClient     obj.Client
 	db            *pachsql.DB
 	tracker       track.Tracker
 	store         kv.Store
@@ -40,10 +38,10 @@ type Storage struct {
 }
 
 // NewStorage creates a new Storage.
-func NewStorage(objC obj.Client, memCache kv.GetPut, db *pachsql.DB, tracker track.Tracker, opts ...StorageOption) *Storage {
+func NewStorage(objStor kv.Store, memCache kv.GetPut, db *pachsql.DB, tracker track.Tracker, opts ...StorageOption) *Storage {
 	s := &Storage{
-		objClient:     objC,
 		db:            db,
+		store:         objStor,
 		tracker:       tracker,
 		memCache:      memCache,
 		deduper:       &miscutil.WorkDeduper[pachhash.Output]{},
@@ -55,8 +53,6 @@ func NewStorage(objC obj.Client, memCache kv.GetPut, db *pachsql.DB, tracker tra
 	for _, opt := range opts {
 		opt(s)
 	}
-	s.store = kv.NewFromObjectClient(s.objClient)
-	s.objClient = nil
 	return s
 }
 
@@ -77,9 +73,12 @@ func (s *Storage) PrefetchData(ctx context.Context, dataRef *DataRef) error {
 
 // List lists all of the chunks in object storage.
 func (s *Storage) List(ctx context.Context, cb func(id ID) error) error {
-	return errors.EnsureStack(s.store.Walk(ctx, nil, func(key []byte) error {
-		return cb(ID(key))
-	}))
+	it := s.store.NewKeyIterator(kv.Span{})
+	return stream.ForEach(ctx, it, func(key []byte) error {
+		var id ID
+		copy(id[:], key)
+		return cb(id)
+	})
 }
 
 // NewDeleter creates a deleter for use with a tracker.GC

@@ -104,6 +104,7 @@ type DataReader struct {
 	ctx      context.Context
 	client   Client
 	memCache kv.GetPut
+	pool     *kv.Pool
 	deduper  *miscutil.WorkDeduper[pachhash.Output]
 	dataRef  *DataRef
 	offset   int64
@@ -138,7 +139,7 @@ func (dr *DataReader) fetchData() error {
 	b.InitialInterval = 1 * time.Millisecond
 	var data []byte
 	if err := backoff.RetryUntilCancel(dr.ctx, func() error {
-		return getFromCache(dr.ctx, dr.memCache, ref, func(chunk []byte) error {
+		return getFromCache(dr.ctx, dr.pool, dr.memCache, ref, func(chunk []byte) error {
 			data = chunk[dr.dataRef.OffsetBytes+dr.offset : dr.dataRef.OffsetBytes+dr.dataRef.SizeBytes]
 			return nil
 		})
@@ -158,9 +159,9 @@ func (dr *DataReader) fetchData() error {
 	return nil
 }
 
-func getFromCache(ctx context.Context, cache kv.GetPut, ref *Ref, cb kv.ValueCallback) error {
+func getFromCache(ctx context.Context, pool *kv.Pool, cache kv.GetPut, ref *Ref, cb kv.ValueCallback) error {
 	key := ref.Key()
-	return errors.EnsureStack(cache.Get(ctx, key[:], cb))
+	return errors.EnsureStack(pool.GetF(ctx, cache, key[:], cb))
 }
 
 func putInCache(ctx context.Context, cache kv.GetPut, ref *Ref, data []byte) error {

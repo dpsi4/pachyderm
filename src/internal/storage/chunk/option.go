@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pachyderm/pachyderm/v2/src/internal/obj"
 	"github.com/pachyderm/pachyderm/v2/src/internal/serviceenv"
+	"github.com/pachyderm/pachyderm/v2/src/internal/storage/kv"
 	"github.com/pachyderm/pachyderm/v2/src/internal/uuid"
 )
 
@@ -16,14 +16,14 @@ type StorageOption func(s *Storage)
 // and readers (download) that can be open at a time.
 func WithMaxConcurrentObjects(maxDownload, maxUpload int) StorageOption {
 	return func(s *Storage) {
-		s.objClient = obj.NewLimitedClient(s.objClient, maxDownload, maxUpload)
+		s.store = kv.NewSemaphored(s.store, maxDownload, maxUpload)
 	}
 }
 
 // WithObjectCache adds a cache around the currently configured object client
-func WithObjectCache(fastLayer obj.Client, size int) StorageOption {
+func WithObjectCache(fastLayer kv.Store, size int) StorageOption {
 	return func(s *Storage) {
-		s.objClient = obj.NewCacheClient(s.objClient, fastLayer, size)
+		s.store = kv.NewLRUCache(s.store, fastLayer, size)
 	}
 }
 
@@ -48,11 +48,7 @@ func StorageOptions(conf *serviceenv.StorageConfiguration) ([]StorageOption, err
 		opts = append(opts, WithMaxConcurrentObjects(0, conf.StorageUploadConcurrencyLimit))
 	}
 	if conf.StorageDiskCacheSize > 0 {
-		diskCache, err := obj.NewLocalClient(filepath.Join(os.TempDir(), "pfs-cache", uuid.NewWithoutDashes()))
-		if err != nil {
-			return nil, err
-		}
-		diskCache = obj.TracingObjClient("DiskCache", diskCache)
+		diskCache := kv.NewFSStore(filepath.Join(os.TempDir(), "pfs-cache", uuid.NewWithoutDashes()))
 		opts = append(opts, WithObjectCache(diskCache, conf.StorageDiskCacheSize))
 	}
 	return opts, nil

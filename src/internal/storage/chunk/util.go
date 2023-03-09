@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/pachyderm/pachyderm/v2/src/internal/dbutil"
-	"github.com/pachyderm/pachyderm/v2/src/internal/dockertestenv"
-	"github.com/pachyderm/pachyderm/v2/src/internal/obj"
 	"github.com/pachyderm/pachyderm/v2/src/internal/pachsql"
 	"github.com/pachyderm/pachyderm/v2/src/internal/require"
 	"github.com/pachyderm/pachyderm/v2/src/internal/storage/kv"
@@ -15,11 +13,12 @@ import (
 
 // NewTestStorage creates a local storage instance for testing during the lifetime of
 // the callback.
-func NewTestStorage(ctx context.Context, t testing.TB, db *pachsql.DB, tr track.Tracker, opts ...StorageOption) (obj.Client, *Storage) {
-	objC := dockertestenv.NewTestObjClient(ctx, t)
+func NewTestStorage(ctx context.Context, t testing.TB, db *pachsql.DB, tr track.Tracker, opts ...StorageOption) (kv.Store, *Storage) {
+	store := kv.NewFSStore(t.TempDir())
 	db.MustExec(`CREATE SCHEMA IF NOT EXISTS storage`)
 	require.NoError(t, dbutil.WithTx(context.Background(), db, SetupPostgresStoreV0))
-	return objC, NewStorage(objC, kv.NewMemCache(10), db, tr, opts...)
+	memCache := kv.NewLRUCache(kv.Void{}, kv.NewMemStore(), 10)
+	return store, NewStorage(store, memCache, db, tr, opts...)
 }
 
 // FullRef creates a data reference for the full chunk referenced by a data reference.

@@ -23,6 +23,7 @@ var _ MetadataStore = &postgresStore{}
 type postgresStore struct {
 	db      *pachsql.DB
 	cache   kv.GetPut
+	pool    *kv.Pool
 	deduper *miscutil.WorkDeduper[ID]
 }
 
@@ -31,7 +32,8 @@ type postgresStore struct {
 func NewPostgresStore(db *pachsql.DB) MetadataStore {
 	return &postgresStore{
 		db:      db,
-		cache:   kv.NewMemCache(100),
+		cache:   kv.NewLRUCache(kv.Void{}, kv.NewMemStore(), 100),
+		pool:    kv.DefaultPool,
 		deduper: &miscutil.WorkDeduper[ID]{},
 	}
 }
@@ -111,7 +113,7 @@ func (s *postgresStore) Get(ctx context.Context, id ID) (*Metadata, error) {
 
 func (s *postgresStore) getFromCache(ctx context.Context, id ID) (*Metadata, error) {
 	md := &Metadata{}
-	if err := s.cache.Get(ctx, id[:], func(data []byte) error {
+	if err := s.pool.GetF(ctx, s.cache, id[:], func(data []byte) error {
 		return errors.EnsureStack(proto.Unmarshal(data, md))
 	}); err != nil {
 		return nil, errors.EnsureStack(err)
