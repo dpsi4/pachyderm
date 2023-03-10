@@ -42,15 +42,21 @@ func (ms *MemStore) Get(ctx context.Context, key []byte, buf []byte) (int, error
 
 func (ms *MemStore) Put(ctx context.Context, key, value []byte) error {
 	ent := newMemEntry(key, value)
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	ms.tree.ReplaceOrInsert(ent)
 	return nil
 }
 
 func (ms *MemStore) Exists(ctx context.Context, key []byte) (bool, error) {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
 	return ms.tree.Has(memEntry{Key: key}), nil
 }
 
 func (ms *MemStore) Delete(ctx context.Context, key []byte) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	ms.tree.Delete(memEntry{Key: key})
 	return nil
 }

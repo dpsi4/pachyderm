@@ -31,12 +31,13 @@ func NewFSStore(dir string) *FSStore {
 	}
 }
 
-func (s *FSStore) Put(ctx context.Context, key, value []byte) error {
+func (s *FSStore) Put(ctx context.Context, key, value []byte) (retErr error) {
 	if err := s.ensureInit(ctx); err != nil {
 		return err
 	}
 	staging := s.stagingPathFor(key)
 	final := s.finalPathFor(key)
+	defer s.cleanupFile(ctx, &retErr, staging)
 	if err := os.WriteFile(staging, value, 0o644); err != nil {
 		return s.transformError(err, key)
 	}
@@ -78,7 +79,11 @@ func (s *FSStore) Delete(ctx context.Context, key []byte) error {
 	if err := s.ensureInit(ctx); err != nil {
 		return err
 	}
-	return os.Remove(s.finalPathFor(key))
+	err := os.Remove(s.finalPathFor(key))
+	if os.IsNotExist(err) {
+		err = nil
+	}
+	return err
 }
 
 func (c *FSStore) stagingPathFor(k []byte) string {
@@ -171,7 +176,8 @@ func (c *FSStore) closeFile(ctx context.Context, retErr *error, f *os.File) {
 	}
 }
 
-func (c *FSStore) removeFile(ctx context.Context, retErr *error, p string) {
+// cleanupFile is called to cleanup files from the staging area
+func (c *FSStore) cleanupFile(ctx context.Context, retErr *error, p string) {
 	err := os.Remove(p)
 	if os.IsNotExist(err) {
 		err = nil

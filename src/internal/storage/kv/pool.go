@@ -6,19 +6,17 @@ import (
 )
 
 // TODO: remove this, let the other storage systems manage their own buffer pools
-var DefaultPool = NewPool(20 * 1 << 20)
+var DefaultPool = NewPool(20 * (1 << 20))
 
 type Pool struct {
-	maxSize int
-	pool    sync.Pool
+	pool sync.Pool
 }
 
-func NewPool(maxSize int) *Pool {
+func NewPool(maxBufferSize int) *Pool {
 	return &Pool{
-		maxSize: maxSize,
 		pool: sync.Pool{
 			New: func() any {
-				return make([]byte, maxSize)
+				return make([]byte, maxBufferSize)
 			},
 		},
 	}
