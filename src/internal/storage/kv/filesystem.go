@@ -37,7 +37,7 @@ func (s *FSStore) Put(ctx context.Context, key, value []byte) error {
 	}
 	staging := s.stagingPathFor(key)
 	final := s.finalPathFor(key)
-	if err := os.WriteFile(final, value, 0o644); err != nil {
+	if err := os.WriteFile(staging, value, 0o644); err != nil {
 		return s.transformError(err, key)
 	}
 	return os.Rename(staging, final)
