@@ -864,7 +864,7 @@ func Server(sopts *ServerOptions, existingClient *client.APIClient) error {
 			http.Error(w, "no authentication providers configured", http.StatusInternalServerError)
 			return
 		}
-		authUrl := loginInfo.LoginURL
+		authUrl := loginInfo.LoginUrl
 		state := loginInfo.State
 
 		r := map[string]string{"auth_url": authUrl, "oidc_state": state}
@@ -885,7 +885,7 @@ func Server(sopts *ServerOptions, existingClient *client.APIClient) error {
 			return
 		}
 
-		resp, err := mm.Client.Authenticate(mm.Client.Ctx(), &auth.AuthenticateRequest{OIDCState: string(oidcState)})
+		resp, err := mm.Client.Authenticate(mm.Client.Ctx(), &auth.AuthenticateRequest{OidcState: string(oidcState)})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
