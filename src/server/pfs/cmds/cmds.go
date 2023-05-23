@@ -356,7 +356,7 @@ $ {{alias}} test@fork -p XXX`,
 				return errors.EnsureStack(err)
 			})
 			if err == nil {
-				fmt.Println(commit.ID)
+				fmt.Println(commit.Id)
 			}
 			return grpcutil.ScrubGRPC(err)
 		}),
@@ -618,7 +618,7 @@ $ {{alias}} foo@master --from XXX`,
 					fromCommit = repo.NewCommit("", from)
 				}
 
-				if toCommit.ID == "" && toCommit.Branch.Name == "" {
+				if toCommit.Id == "" && toCommit.Branch.Name == "" {
 					// just a repo
 					toCommit = nil
 				}
@@ -688,7 +688,7 @@ $ {{alias}} foo@XXX -b bar@baz`,
 			}
 			defer c.Close()
 
-			commitInfo, err := c.WaitCommit(commit.Branch.Repo.Project.GetName(), commit.Branch.Repo.Name, commit.Branch.Name, commit.ID)
+			commitInfo, err := c.WaitCommit(commit.Branch.Repo.Project.GetName(), commit.Branch.Repo.Name, commit.Branch.Name, commit.Id)
 			if err != nil {
 				return err
 			}
@@ -1961,7 +1961,7 @@ Objects are a low-level resource and should not be accessed directly by most use
 				if err != nil {
 					return err
 				}
-				if commit.ID == "" && commit.Branch.Name == "" {
+				if commit.Id == "" && commit.Branch.Name == "" {
 					return errors.Errorf("provide a specific commit or branch for zombie detection on %s", commit.Branch.Repo)
 				}
 				opts = append(opts, client.WithZombieCheckTarget(commit))

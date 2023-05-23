@@ -642,7 +642,7 @@ func Server(sopts *ServerOptions, existingClient *client.APIClient) error {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Info(pctx.TODO(), "Mounting first datum", zap.String("datumID", datums[0].Datum.ID))
+		log.Info(pctx.TODO(), "Mounting first datum", zap.String("datumID", datums[0].Datum.Id))
 		mis := mm.datumToMounts(datums[0], datumAlias)
 		for _, mi := range mis {
 			if _, err := mm.MountRepo(mi); err != nil {
@@ -663,7 +663,7 @@ func Server(sopts *ServerOptions, existingClient *client.APIClient) error {
 		}()
 
 		resp := MountDatumResponse{
-			Id:        datums[0].Datum.ID,
+			Id:        datums[0].Datum.Id,
 			Idx:       0,
 			NumDatums: len(datums),
 		}
@@ -706,7 +706,7 @@ func Server(sopts *ServerOptions, existingClient *client.APIClient) error {
 		if id != "" {
 			foundDatum := false
 			for idx, di = range mm.Datums {
-				if di.Datum.ID == id {
+				if di.Datum.Id == id {
 					foundDatum = true
 					break
 				}
@@ -739,7 +739,7 @@ func Server(sopts *ServerOptions, existingClient *client.APIClient) error {
 		}()
 
 		resp := MountDatumResponse{
-			Id:        di.Datum.ID,
+			Id:        di.Datum.Id,
 			Idx:       idx,
 			NumDatums: len(mm.Datums),
 		}
@@ -1294,7 +1294,7 @@ func (m *MountStateMachine) RefreshMountState() error {
 	if err != nil {
 		return err
 	}
-	m.LatestCommit = commitInfos[0].Commit.ID
+	m.LatestCommit = commitInfos[0].Commit.Id
 
 	// reverse slice
 	for i, j := 0, len(commitInfos)-1; i < j; i, j = i+1, j-1 {
@@ -1305,8 +1305,8 @@ func (m *MountStateMachine) RefreshMountState() error {
 	log.Info(pctx.TODO(), "mounting", zap.String("name", m.Name))
 	indexOfCurrentCommit := -1
 	for i, commitInfo := range commitInfos {
-		log.Info(pctx.Child(pctx.TODO(), "", pctx.WithoutRatelimit()), "commitInfo dump", zap.Int("i", i), zap.String("commitID", commitInfo.Commit.ID), zap.String("actualMountedCommitID", m.ActualMountedCommit))
-		if commitInfo.Commit.ID == m.ActualMountedCommit {
+		log.Info(pctx.Child(pctx.TODO(), "", pctx.WithoutRatelimit()), "commitInfo dump", zap.Int("i", i), zap.String("commitID", commitInfo.Commit.Id), zap.String("actualMountedCommitID", m.ActualMountedCommit))
+		if commitInfo.Commit.Id == m.ActualMountedCommit {
 			indexOfCurrentCommit = i
 			break
 		}
@@ -1516,7 +1516,7 @@ func mountingState(m *MountStateMachine) StateFn {
 		if err != nil {
 			return err
 		}
-		m.manager.root.commits[m.Name] = commitInfos[0].Commit.ID
+		m.manager.root.commits[m.Name] = commitInfos[0].Commit.Id
 		return nil
 	}()
 	// re-downloading the repos with an updated RepoOptions set will have the
