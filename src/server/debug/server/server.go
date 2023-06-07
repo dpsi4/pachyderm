@@ -58,6 +58,8 @@ const (
 )
 
 type debugServer struct {
+	debug.UnimplementedDebugServer
+
 	env           serviceenv.ServiceEnv
 	name          string
 	sidecarClient *client.APIClient
