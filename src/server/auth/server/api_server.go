@@ -214,7 +214,7 @@ func (a *apiServer) EnvBootstrap(ctx context.Context) error {
 		if a.env.Config.AuthConfig != "" && a.env.Config.IdentityClients != "" {
 			log.Info(ctx, "attempting to add or update oidc clients")
 			var config auth.OIDCConfig
-			var clients []identity.OIDCClient
+			var clients []*identity.OIDCClient
 			if err := yaml.Unmarshal([]byte(a.env.Config.AuthConfig), &config); err != nil {
 				return errors.Wrapf(err, "unmarshal auth config: %q", a.env.Config.AuthConfig)
 			}
@@ -223,7 +223,7 @@ func (a *apiServer) EnvBootstrap(ctx context.Context) error {
 				return errors.Wrapf(err, "unmarshal identity clients: %q", a.env.Config.IdentityClients)
 			}
 			if a.env.Config.IdentityAdditionalClients != "" {
-				var extras []identity.OIDCClient
+				var extras []*identity.OIDCClient
 				if err := yaml.Unmarshal([]byte(a.env.Config.IdentityAdditionalClients), &extras); err != nil {
 					return errors.Wrapf(err, "unmarshal extra identity clients: %q", a.env.Config.IdentityAdditionalClients)
 				}
@@ -247,7 +247,7 @@ func (a *apiServer) EnvBootstrap(ctx context.Context) error {
 					c.Secret = a.env.Config.ConsoleOAuthSecret
 				}
 				if !a.env.Config.EnterpriseMember {
-					if _, err := a.env.GetIdentityServer().CreateOIDCClient(ctx, &identity.CreateOIDCClientRequest{Client: &c}); err != nil {
+					if _, err := a.env.GetIdentityServer().CreateOIDCClient(ctx, &identity.CreateOIDCClientRequest{Client: c}); err != nil {
 						if !identity.IsErrAlreadyExists(err) {
 							return errors.Wrapf(err, "create oidc client %q", c.Name)
 						}
@@ -255,7 +255,7 @@ func (a *apiServer) EnvBootstrap(ctx context.Context) error {
 						if _, err := a.env.GetIdentityServer().DeleteOIDCClient(ctx, &identity.DeleteOIDCClientRequest{Id: c.Id}); err != nil {
 							return errors.Wrapf(err, "delete oidc client %q", c.Name)
 						}
-						if _, err := a.env.GetIdentityServer().CreateOIDCClient(ctx, &identity.CreateOIDCClientRequest{Client: &c}); err != nil {
+						if _, err := a.env.GetIdentityServer().CreateOIDCClient(ctx, &identity.CreateOIDCClientRequest{Client: c}); err != nil {
 							return errors.Wrapf(err, "update oidc client %q", c.Name)
 						}
 					}
@@ -265,7 +265,7 @@ func (a *apiServer) EnvBootstrap(ctx context.Context) error {
 						return errors.Wrapf(err, "connect to enterprise server")
 					}
 					ec.SetAuthToken(a.env.Config.EnterpriseServerToken)
-					if _, err = ec.IdentityAPIClient.CreateOIDCClient(ec.Ctx(), &identity.CreateOIDCClientRequest{Client: &c}); err != nil {
+					if _, err = ec.IdentityAPIClient.CreateOIDCClient(ec.Ctx(), &identity.CreateOIDCClientRequest{Client: c}); err != nil {
 						if !identity.IsErrAlreadyExists(err) {
 							return errors.Wrapf(err, "create oidc client %q", c.Name)
 						}
@@ -273,7 +273,7 @@ func (a *apiServer) EnvBootstrap(ctx context.Context) error {
 						if _, err := ec.IdentityAPIClient.DeleteOIDCClient(ec.Ctx(), &identity.DeleteOIDCClientRequest{Id: c.Id}); err != nil {
 							return errors.Wrapf(err, "delete oidc client %q", c.Name)
 						}
-						if _, err := ec.IdentityAPIClient.CreateOIDCClient(ec.Ctx(), &identity.CreateOIDCClientRequest{Client: &c}); err != nil {
+						if _, err := ec.IdentityAPIClient.CreateOIDCClient(ec.Ctx(), &identity.CreateOIDCClientRequest{Client: c}); err != nil {
 							return errors.Wrapf(err, "update oidc client %q", c.Name)
 						}
 					}
@@ -740,7 +740,7 @@ func (a *apiServer) evaluateRoleBindingInTransaction(txnCtx *txncontext.Transact
 		projectKey := authdb.ResourceKey(projectResource)
 		if err := a.roleBindings.ReadWrite(txnCtx.SqlTx).Get(projectKey, &roleBinding); err != nil {
 			if col.IsErrNotFound(err) {
-				return nil, &auth.ErrNoRoleBinding{Resource: *projectResource}
+				return nil, &auth.ErrNoRoleBinding{Resource: projectResource}
 			}
 			return nil, errors.Wrapf(err, "error getting role bindings for %s", projectKey)
 		}
@@ -756,7 +756,7 @@ func (a *apiServer) evaluateRoleBindingInTransaction(txnCtx *txncontext.Transact
 	if err := a.roleBindings.ReadWrite(txnCtx.SqlTx).Get(authdb.ResourceKey(resource), &roleBinding); err != nil {
 		if col.IsErrNotFound(err) {
 			return nil, &auth.ErrNoRoleBinding{
-				Resource: *resource,
+				Resource: resource,
 			}
 		}
 		return nil, errors.Wrapf(err, "error getting role bindings for %s \"%s\"", resource.Type, resource.Name)
@@ -1089,7 +1089,7 @@ func (a *apiServer) setUserRoleBindingInTransaction(txnCtx *txncontext.Transacti
 	if err := roleBindings.Get(key, &bindings); err != nil {
 		if col.IsErrNotFound(err) {
 			return &auth.ErrNoRoleBinding{
-				Resource: *resource,
+				Resource: resource,
 			}
 		}
 		return errors.EnsureStack(err)
