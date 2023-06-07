@@ -456,7 +456,6 @@ func writeProfile(ctx context.Context, w io.Writer, profile *debug.Profile) (ret
 		defer pprof.StopCPUProfile()
 		duration := defaultDuration
 		if profile.Duration != nil {
-			var err error
 			duration = profile.Duration.AsDuration()
 		}
 		// Wait for either the defined duration, or until the context is
@@ -672,7 +671,14 @@ func (s *debugServer) collectCommits(rctx context.Context, tw *tar.Writer, pachC
 				finishing.XValues = append(finishing.XValues, float64(len(finishing.XValues)+1))
 				finishing.YValues = append(finishing.YValues, float64(finishingDuration))
 			}
-			return errors.EnsureStack(s.marshaller.Marshal(w, ci))
+			b, err := s.marshaller.Marshal(ci)
+			if err != nil {
+				return errors.Wrap(err, "marshal")
+			}
+			if _, err := w.Write(b); err != nil {
+				return errors.Wrap(err, "write")
+			}
+			return nil
 		})
 	}, prefix...); err != nil {
 		return err
@@ -909,8 +915,13 @@ func (s *debugServer) collectPipelineDumpFunc(limit int64) collectPipelineFunc {
 			}
 			var pipelineErrs error
 			for _, fullPipelineInfo := range fullPipelineInfos {
-				if err := s.marshaller.Marshal(w, fullPipelineInfo); err != nil {
-					errors.JoinInto(&pipelineErrs, errors.Wrapf(err, "marshalFullPipelineInfo(%s)", fullPipelineInfo.GetPipeline()))
+				b, err := s.marshaller.Marshal(fullPipelineInfo)
+				if err != nil {
+					errors.JoinInto(&pipelineErrs, errors.Wrapf(err, "fullPipelineInfo.Marshal(%v)", fullPipelineInfo.GetPipeline()))
+					continue
+				}
+				if _, err := w.Write(b); err != nil {
+					errors.JoinInto(&pipelineErrs, errors.Wrapf(err, "fullPipelineInfo.Write(%v)", fullPipelineInfo.GetPipeline()))
 				}
 			}
 			return nil
@@ -1139,7 +1150,14 @@ func (s *debugServer) collectJobs(tw *tar.Writer, pachClient *client.APIClient, 
 				upload.XValues = append(upload.XValues, float64(len(upload.XValues)+1))
 				upload.YValues = append(upload.YValues, float64(uploadDuration))
 			}
-			return errors.EnsureStack(s.marshaller.Marshal(w, ji))
+			b, err := s.marshaller.Marshal(ji)
+			if err != nil {
+				return errors.Wrap(err, "marshal")
+			}
+			if _, err := w.Write(b); err != nil {
+				return errors.Wrap(err, "write")
+			}
+			return nil
 		})
 	}, prefix...); err != nil {
 		return err
