@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
 	etcd "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/pachyderm/pachyderm/v2/src/auth"
 	"github.com/pachyderm/pachyderm/v2/src/internal/client"
@@ -657,7 +658,7 @@ func (d *driver) createProjectInTransaction(txnCtx *txncontext.TransactionContex
 	if err := projects.Create(pfsdb.ProjectKey(req.Project), &pfs.ProjectInfo{
 		Project:     req.Project,
 		Description: req.Description,
-		CreatedAt:   types.TimestampNow(),
+		CreatedAt:   timestamppb.Now(),
 	}); err != nil {
 		if errors.As(err, &col.ErrExists{}) {
 			return pfsserver.ErrProjectExists{
@@ -1208,7 +1209,7 @@ func (d *driver) resolveCommitWithAuth(ctx context.Context, commit *pfs.Commit) 
 		cinfo := &pfs.CommitInfo{
 			Commit:      commit,
 			Description: "FileSet - Virtual Commit",
-			Finished:    &types.Timestamp{}, // it's always been finished. How did you get the id if it wasn't finished?
+			Finished:    &timestamppb.Timestamp{}, // it's always been finished. How did you get the id if it wasn't finished?
 		}
 		return cinfo, nil
 	}
@@ -1334,7 +1335,7 @@ func (d *driver) getCommit(ctx context.Context, commit *pfs.Commit) (*pfs.Commit
 		cinfo := &pfs.CommitInfo{
 			Commit:      commit,
 			Description: "FileSet - Virtual Commit",
-			Finished:    &types.Timestamp{}, // it's always been finished. How did you get the id if it wasn't finished?
+			Finished:    &timestamppb.Timestamp{}, // it's always been finished. How did you get the id if it wasn't finished?
 		}
 		return cinfo, nil
 	}
@@ -1373,7 +1374,7 @@ func (d *driver) listCommit(
 	repo *pfs.Repo,
 	to *pfs.Commit,
 	from *pfs.Commit,
-	startTime *types.Timestamp,
+	startTime *timestamppb.Timestamp,
 	number int64,
 	reverse bool,
 	all bool,
@@ -2125,11 +2126,11 @@ func (d *driver) makeEmptyCommit(txnCtx *txncontext.TransactionContext, branch *
 	return commit, nil
 }
 
-func (d *driver) putCache(ctx context.Context, key string, value *types.Any, fileSetIds []fileset.ID, tag string) error {
+func (d *driver) putCache(ctx context.Context, key string, value *anypb.Any, fileSetIds []fileset.ID, tag string) error {
 	return d.cache.Put(ctx, key, value, fileSetIds, tag)
 }
 
-func (d *driver) getCache(ctx context.Context, key string) (*types.Any, error) {
+func (d *driver) getCache(ctx context.Context, key string) (*anypb.Any, error) {
 	return d.cache.Get(ctx, key)
 }
 
